@@ -27,8 +27,6 @@ set_perm() {
   fi) || return 1
 }
 
-if ((USER_ID)); then PS1='$'; else PS1='#'; fi
-
 export USER=$(id -un)
 export USERID=$(id -u)
 export HOME="/data/chuser/$USER/home"
@@ -61,7 +59,7 @@ if [ ! -d "/data/chuser/$USER" ]; then
   done
 
   # Add Magisk's Busybox. Only works as root user.
-  # ln -s /data/adb/magisk/busybox $USR/bin/busybox
+  ln -s /data/adb/magisk/busybox $USR/bin/busybox
 
   if [ ! -d "$USR/etc/profile.d" ]; then
     mkdir $USR/etc/profile.d
@@ -69,8 +67,8 @@ if [ ! -d "/data/chuser/$USER" ]; then
     echo "notification() {\n  su -lp 2000 -c \"cmd notification post -S bigtext -t 'Mkshrc Service Mount Error' 'Tag' 'There was an errer while mounting your system as read-write or read-only.'\"\n}" >$USR/etc/profile.d/notification.sh
   fi
 
-  if [ ! -f "$USR/etc/mkshrc" ]; then
-    echo "# Aliases\nalias bsu='su -s bash'\nalias ls='ls --color=auto'\nalias lsa='ls --color=auto -A'" >$USR/etc/mkshrc
+  if [ ! -f "$HOME/.mkshrc" ]; then
+    echo "# Aliases\nalias bsu='su -s bash'\nalias ls='ls --color=auto'\nalias lsa='ls --color=auto -A'" >$HOME/.mkshrc
   fi
 fi
 
@@ -82,18 +80,28 @@ if [ -d "/data/chuser/$USER" ]; then
     fi
   done
 
+  if [ ! -f "$USR/etc/mkshrc" ]; then
+    ln -s $HOME/.mkshrc $USR/etc/mkshrc
+  fi
+
   # Keep the storage clear and use user based mkshrc
-  if [ -f "$USR/etc/mkshrc" ]; then
-    . $USR/etc/mkshrc
+  if [ -f "$HOME/.mkshrc" ]; then
+    . $HOME/.mkshrc
   fi
 fi
 
-PS1=$'\e[35m┌\e[0m\e[92m$USER@$HOSTNAME\e[0m:\e[34m${PWD:-?}\e[0m\n\e[35m└─\e[0m# '
-PS0="└─"
+if [ "$USER" != "root" ]; then
+  PS='$'
+else
+  PS='#'
+fi
+
+PS1=$'\e[35m┌\e[0m\e[92m$USER@$HOSTNAME\e[0m:\e[34m${PWD:-?}\e[0m\n\e[35m└─\e[0m$PS '
 
 export MKSHRCSYS_INSTALLED="true"
-export TMPDIR="/data/local/tmp"
+export TMPDIR="$USR/tmp"
 export TERM="xterm-256color"
+export SHELL="/system/bin/sh"
 
 # PATH Binary Folder
 export SYSTEM_EXT_BIN="/system/system_ext/bin"
@@ -105,7 +113,7 @@ export BIN_GET_BIN="/system/usr/share/bin-get/bin"
 export YARN_BIN="/system/usr/share/.yarn/bin"
 export YARN_GLOBAL_BIN="$HOME/.config/yarn/global/node_modules/.bin"
 
-export PATH="$YARN_BIN:$YARN_GLOBAL_BIN:$SYSTEM_BIN:$SYSTEM_EXT_BIN:$SYSTEM_PRODUCT_BIN:$VENDOR_BIN:$USR/bin:$PATH"
+export PATH="$YARN_BIN:$YARN_GLOBAL_BIN:$SYSTEM_BIN:$SYSTEM_EXT_BIN:$SYSTEM_PRODUCT_BIN:$VENDOR_BIN:$USR/bin:$BIN_GET_BIN:$PATH"
 
 # Symlink /system into /usr. This is only a requirement for the Node.js module, to make binaries work.
 sudo mount -o rw,remount /
